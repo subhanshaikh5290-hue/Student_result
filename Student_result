@@ -1,0 +1,169 @@
+import os
+import openpyxl
+from openpyxl import Workbook, load_workbook
+
+FILE_NAME = "student_results.xlsx"
+HEADERS = [
+    "Roll No", "Name", "Class", 
+    "Subject 1", "Subject 2", "Subject 3", "Subject 4", "Subject 5", 
+    "Total", "Percentage", "Grade", "Status"
+]
+
+
+def init_excel():
+    """Create the Excel file with headers if it does not exist."""
+    if not os.path.exists(FILE_NAME):
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Results"
+        ws.append(HEADERS)
+        wb.save(FILE_NAME)
+
+
+def calculate_result(marks):
+    """Calculate Total, Percentage, Grade, and Status based on marks."""
+    total = sum(marks)
+    percentage = total / 5.0
+    
+    # Pass condition: individual subject >= 35 and overall percentage >= 35%
+    has_failed_subject = any(m < 35 for m in marks)
+    
+    if has_failed_subject or percentage < 35:
+        status = "FAIL"
+        grade = "F"
+    else:
+        status = "PASS"
+        if percentage >= 85:
+            grade = "A+"
+        elif percentage >= 75:
+            grade = "A"
+        elif percentage >= 60:
+            grade = "B"
+        elif percentage >= 50:
+            grade = "C"
+        else:
+            grade = "D"
+            
+    return total, round(percentage, 2), grade, status
+
+
+def add_student():
+    """Add a new student record to the Excel file."""
+    print("\n--- Add Student Result ---")
+    try:
+        roll_no = int(input("Enter Roll No: "))
+    except ValueError:
+        print("Invalid input! Roll number must be an integer.")
+        return
+
+    # Check for duplicate roll number
+    wb = load_workbook(FILE_NAME)
+    ws = wb.active
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        if row[0] == roll_no:
+            print(f"Error: Roll No {roll_no} already exists.")
+            return
+
+    name = input("Enter Student Name: ").strip()
+    course_class = input("Enter Course/Class: ").strip()
+
+    marks = []
+    for i in range(1, 6):
+        while True:
+            try:
+                m = float(input(f"Enter Marks for Subject {i} (0-100): "))
+                if 0 <= m <= 100:
+                    marks.append(m)
+                    break
+                else:
+                    print("Marks should be between 0 and 100.")
+            except ValueError:
+                print("Invalid input! Please enter a valid number.")
+
+    total, percentage, grade, status = calculate_result(marks)
+
+    row_data = [roll_no, name, course_class] + marks + [total, percentage, grade, status]
+    ws.append(row_data)
+    wb.save(FILE_NAME)
+    print(f"✅ Record for Roll No {roll_no} saved successfully!")
+
+
+def get_result():
+    """Fetch and display a student record by Roll Number."""
+    print("\n--- Get Student Result ---")
+    try:
+        search_roll = int(input("Enter Roll No: "))
+    except ValueError:
+        print("Invalid input! Roll number must be an integer.")
+        return
+
+    wb = load_workbook(FILE_NAME)
+    ws = wb.active
+
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        if row[0] == search_roll:
+            print("\n--------------------------------")
+            print("Student Result")
+            print("--------------------------------")
+            print(f"Roll No     : {row[0]}")
+            print(f"Name        : {row[1]}")
+            print(f"Class       : {row[2]}")
+            print(f"Total       : {row[8]}")
+            print(f"Percentage  : {row[9]:.2f}%")
+            print(f"Grade       : {row[10]}")
+            print(f"Status      : {row[11]}")
+            print("--------------------------------")
+            return
+
+    print(f"❌ Record for Roll No {search_roll} not found.")
+
+
+def show_all_data():
+    """Display all student records in tabular format."""
+    print("\n--- All Student Records ---")
+    wb = load_workbook(FILE_NAME)
+    ws = wb.active
+
+    rows = list(ws.iter_rows(min_row=2, values_only=True))
+    if not rows:
+        print("No records found in the system.")
+        return
+
+    # Header display
+    print(f"{'Roll No':<10} {'Name':<15} {'Class':<10} {'Total':<10} {'Percentage':<12} {'Grade':<8} {'Status':<8}")
+    print("-" * 75)
+
+    for r in rows:
+        print(f"{r[0]:<10} {r[1]:<15} {r[2]:<10} {r[8]:<10} {r[9]:<12.2f} {r[10]:<8} {r[11]:<8}")
+
+
+def menu():
+    """Main menu-driven loop."""
+    init_excel()
+    
+    while True:
+        print("\n========================================")
+        print("      STUDENT RESULT MANAGEMENT")
+        print("========================================")
+        print("1. Add Student Result")
+        print("2. Get Student Result")
+        print("3. Show All Student Data")
+        print("4. Exit")
+        
+        choice = input("Enter your choice (1-4): ").strip()
+
+        if choice == '1':
+            add_student()
+        elif choice == '2':
+            get_result()
+        elif choice == '3':
+            show_all_data()
+        elif choice == '4':
+            print("Exiting program. Goodbye!")
+            break
+        else:
+            print("Invalid choice! Please select between 1 and 4.")
+
+
+if __name__ == "__main__":
+    menu()
